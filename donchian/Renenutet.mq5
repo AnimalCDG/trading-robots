@@ -35,12 +35,25 @@ enum Tendencia
    ERRO
 };
 
+enum TendenciaMercado
+{
+   MERCADO_FORTE_BAIXA,
+   MERCADO_BAIXA,
+   MERCADO_LATERAL,
+   MERCADO_ALTA,
+   MERCADO_FORTE_ALTA
+};
+
 struct IndicadorTrend
 {
    double valorAtual;
    double valorAnterior;
+   double delta;
    double slope;
    int score;
+   double forca;   // -100% a +100%
+   bool subindo;
+   bool acelerando;
    Tendencia tendencia;
 };
 
@@ -68,6 +81,7 @@ void OnDeinit(const int reason)
 //| Expert tick function                                             |
 //+------------------------------------------------------------------+
 void OnTick() {
+   Print("Time atual: ", TimeToString(iTime(_Symbol, PERIOD_CURRENT, 0)));
    double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
    double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);   
    _sma = LerMedia(handleSMA50);
@@ -86,22 +100,29 @@ void OnTick() {
    */
    IndicadorTrend ema20 = ObterTrend(handleEMA20, 20);
    PrintFormat(
-      "EMA20 %.5f | Score=%d | Slope=%.5f | %s",
+      "EMA20 %.5f | Score=%d | Slope=%.5f | Delta=%.5f | Força=%.5f | %s",
       ema20.valorAtual,
       ema20.score,
       ema20.slope,
+      ema20.delta,
+      ema20.forca,
       TendenciaToString(ema20.tendencia)
    );
-   /*
+   
    IndicadorTrend sma50 = ObterTrend(handleSMA50, 50);
    PrintFormat(
-      "SMA50 %.5f | Score=%d | Slope=%.5f | %s",
+      "SMA50 %.5f | Score=%d | Slope=%.5f | Delta=%.5f | Força=%.5f | %s",
       sma50.valorAtual,
       sma50.score,
       sma50.slope,
+      sma50.delta,
+      sma50.forca,
       TendenciaToString(sma50.tendencia)
    );
-   */
+   
+   if(sma50.valorAtual == ema20.valorAtual) {
+      Print("Operar");
+   }
 }
 //+------------------------------------------------------------------+
 
@@ -204,12 +225,13 @@ string TendenciaToString(Tendencia t)
    return "Desconhecida";
 }
 
-IndicadorTrend ObterTrend(int handle, int candles = 6)
+IndicadorTrend ObterTrendOld(int handle, int candles = 6)
 {
    IndicadorTrend trend;
 
    trend.valorAtual    = EMPTY_VALUE;
    trend.valorAnterior = EMPTY_VALUE;
+   trend.delta         = 0;
    trend.slope         = 0;
    trend.score         = 0;
    trend.tendencia     = ERRO;
@@ -217,10 +239,11 @@ IndicadorTrend ObterTrend(int handle, int candles = 6)
    double media[];
 
    ArrayResize(media, candles);
+   ArraySetAsSeries(media, true);
 
    if(CopyBuffer(handle, 0, 0, candles, media) != candles)
       return trend;
-      
+   /*   
    Print("----------------------------");
 
    for(int i = 0; i < candles; i++)
@@ -231,23 +254,44 @@ IndicadorTrend ObterTrend(int handle, int candles = 6)
          media[i]
       );
    }
-
+   */
    trend.valorAtual = media[0];
    trend.valorAnterior = media[1];
 
    int score = 0;
-
-   for(int i = 0; i < candles - 1; i++)
+   int scoreMaximo = 0;
+   
+   for (int i = 0; i < candles - 1; i++)
    {
-      if(media[i] > media[i+1])
-         score++;
-      else if(media[i] < media[i+1])
-         score--;
+      scoreMaximo += (candles - i);
+       int peso = candles - 1 - i; // mais recente = maior peso
+   
+       if (media[i] > media[i + 1])
+           score += peso;
+       else if (media[i] < media[i + 1])
+           score -= peso;
    }
-
+   
+   /* INVERTIDO
+   for (int i = 0; i < candles - 1; i++)
+   {
+      scoreMaximo += (candles - i);
+       int peso = candles - 1 - i; // mais recente = maior peso
+   
+       if (media[i] < media[i + 1])
+           score += peso;
+       else if (media[i] > media[i + 1])
+           score -= peso;
+   }
+   */
    trend.score = score;
 
-   trend.slope = media[0] - media[candles-1];
+   trend.delta = media[0] - media[candles-1];
+   //trend.delta = media[candles - 1] - media[0]; //INVERTIDO
+
+   trend.slope = trend.delta / (candles-1);
+   
+   trend.forca = (100.0 * score) / scoreMaximo;
 
    int maxScore = candles - 1;
 
@@ -266,4 +310,136 @@ IndicadorTrend ObterTrend(int handle, int candles = 6)
       trend.tendencia = LATERAL;
 
    return trend;
+}
+
+IndicadorTrend ObterTrend(int handle, int candles = 20)
+{
+   IndicadorTrend trend;
+
+   trend.valorAtual    = EMPTY_VALUE;
+   trend.valorAnterior = EMPTY_VALUE;
+   trend.delta         = 0;
+   trend.slope         = 0;
+   trend.score         = 0;
+   trend.forca         = 0;
+   trend.tendencia     = ERRO;
+   trend.subindo       = false;
+   trend.acelerando    = false;
+
+   double media[];
+
+   ArrayResize(media, candles);
+   ArraySetAsSeries(media, true);
+
+   if(CopyBuffer(handle, 0, 0, candles, media) != candles)
+      return trend;
+
+   trend.valorAtual    = media[0];
+   trend.valorAnterior = media[1];
+
+   trend.subindo = media[0] > media[1];
+
+   if(candles >= 3)
+      trend.acelerando =
+         MathAbs(media[0]-media[1]) >
+         MathAbs(media[1]-media[2]);
+
+   int score = 0;
+   int scoreMaximo = 0;
+
+   for(int i=0;i<candles-1;i++)
+   {
+      int peso = candles-1-i;
+
+      scoreMaximo += peso;
+
+      if(media[i] > media[i+1])
+         score += peso;
+      else
+      if(media[i] < media[i+1])
+         score -= peso;
+   }
+
+   trend.score = score;
+
+   trend.delta = media[0] - media[candles-1];
+
+   trend.slope = trend.delta / (candles-1);
+
+   trend.forca = (100.0 * score) / scoreMaximo;
+
+   if(trend.forca >= 80)
+      trend.tendencia = FORTE_ALTA;
+   else
+   if(trend.forca >= 30)
+      trend.tendencia = ALTA;
+   else
+   if(trend.forca <= -80)
+      trend.tendencia = FORTE_BAIXA;
+   else
+   if(trend.forca <= -30)
+      trend.tendencia = BAIXA;
+   else
+      trend.tendencia = LATERAL;
+
+   return trend;
+}
+
+TendenciaMercado AvaliarMercado(const IndicadorTrend &ema20, const IndicadorTrend &sma50)
+{
+   int score = 0;
+
+   //-------------------------
+   // EMA20 x SMA50
+   //-------------------------
+   if(ema20.valorAtual > sma50.valorAtual)
+      score += 40;
+   else
+      score -= 40;
+
+   //-------------------------
+   // Inclinação EMA20
+   //-------------------------
+   const double LIMIAR = 0.00005;
+
+   if(ema20.slope > LIMIAR)
+      score += 30;
+   else
+   if(ema20.slope < -LIMIAR)
+      score -= 30;
+
+   //-------------------------
+   // Inclinação SMA50
+   //-------------------------
+   if(sma50.slope > LIMIAR)
+      score += 20;
+   else
+   if(sma50.slope < -LIMIAR)
+      score -= 20;
+
+   //-------------------------
+   // Força da EMA20
+   //-------------------------
+   if(ema20.forca > 70)
+      score += 10;
+   else
+   if(ema20.forca < -70)
+      score -= 10;
+
+   //-------------------------
+   // Classificação
+   //-------------------------
+   if(score >= 80)
+      return MERCADO_FORTE_ALTA;
+
+   if(score >= 30)
+      return MERCADO_ALTA;
+
+   if(score <= -80)
+      return MERCADO_FORTE_BAIXA;
+
+   if(score <= -30)
+      return MERCADO_BAIXA;
+
+   return MERCADO_LATERAL;
 }
