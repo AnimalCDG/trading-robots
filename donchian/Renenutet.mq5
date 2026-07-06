@@ -11,12 +11,6 @@
 
 CTrade trade;
 
-double            _sma                 = 0;
-int               handleSMA50          = 0;
-
-double            _ema                 = 0;
-int               handleEMA20          = 0;
-
 struct PosicaoTrade
 {
    ulong  ticket;
@@ -46,16 +40,24 @@ enum TendenciaMercado
 
 struct IndicadorTrend
 {
-   double valorAtual;
-   double valorAnterior;
-   double delta;
-   double slope;
-   int score;
-   double forca;   // -100% a +100%
-   bool subindo;
-   bool acelerando;
-   Tendencia tendencia;
+   double      valorAtual;
+   double      valorAnterior;
+   double      delta;
+   double      slope;
+   int         score;
+   double      forca;   // -100% a +100%
+   bool        subindo;
+   bool        acelerando;
+   Tendencia   tendencia;
 };
+
+double            _sma                 = 0;
+int               handleSMA50          = 0;
+
+double            _ema                 = 0;
+int               handleEMA20          = 0;
+
+int               InpMagicMethodOne    = 10001; /* Número mágico */
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -120,9 +122,8 @@ void OnTick() {
       TendenciaToString(sma50.tendencia)
    );
    
-   if(sma50.valorAtual == ema20.valorAtual) {
-      Print("Operar");
-   }
+   NegociacaoMetodoUm(ema20, sma50);
+   
 }
 //+------------------------------------------------------------------+
 
@@ -442,4 +443,183 @@ TendenciaMercado AvaliarMercado(const IndicadorTrend &ema20, const IndicadorTren
       return MERCADO_BAIXA;
 
    return MERCADO_LATERAL;
+}
+
+void NegociacaoMetodoUm(const IndicadorTrend &ema20, const IndicadorTrend &sma50)
+{
+   double takeProfit = 0.0;
+   //TESTE
+      double takeProfit1 = 0.0;
+      double takeProfit2 = 0.0;
+      double takeProfit3 = 0.0;
+   double gainTwoThirds = 0.0;
+   double gainThreeThirds = 0.0;
+   double stopLoss = 0.0;
+   
+   double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+   double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+      
+   //Print("sma50.tendencia: ", sma50.tendencia, "ema20.tendencia: ", ema20.tendencia);
+   if((ema20.tendencia == BAIXA && (sma50.tendencia == FORTE_ALTA || sma50.tendencia == ALTA)) && (ema20.valorAtual < sma50.valorAtual)) 
+   {
+      if(IsOrderOpen(InpMagicMethodOne) == false)
+      {
+         Print("OPERAR VENDIDO USANDO EMA20");
+         stopLoss = bid + (bid * 0.02);
+         takeProfit1 = bid - (bid * 0.0066);
+         takeProfit2 = bid - (bid * 0.0133);
+         takeProfit3 = bid - (bid * 0.0198);
+         
+         takeProfit = bid - (bid * 0.0066);
+         PlaceOrder(ORDER_TYPE_SELL, 0.01, bid, stopLoss, takeProfit, InpMagicMethodOne, "Estratégia Método 01 1/3");
+         
+         takeProfit = bid - (bid * 0.0133);
+         PlaceOrder(ORDER_TYPE_SELL, 0.01, bid, stopLoss, takeProfit, InpMagicMethodOne, "Estratégia Método 01 2/3");
+         
+         takeProfit = bid - (bid * 0.02);
+         PlaceOrder(ORDER_TYPE_SELL, 0.01, bid, stopLoss, takeProfit, InpMagicMethodOne, "Estratégia Método 01 3/3");
+         
+         PrintFormat(
+            "BID %.5f | SL=%.5f | TP1=%.5f | TP2=%.5f | TP3=%.5f",
+            bid,
+            stopLoss,
+            takeProfit1,
+            takeProfit2,
+            takeProfit3
+         );
+      }
+   }
+   
+   if(IsOrderOpen(InpMagicMethodOne) == true) 
+   {
+      //ApplyTrailingStop(InpMagicMethodOne, sma50.valorAtual);
+   }   
+   
+   //Teste
+   if(sma50.tendencia == 4) {
+      //Print("OPERAR COMPRA USANDO SMA50");
+   }
+   
+   //Teste
+   if(sma50.valorAtual == ema20.valorAtual) {
+      //Print("Operar");
+   }
+}
+
+//+------------------------------------------------------+
+//|  Função que verifica se já existe uma ordem aberta   |
+//+------------------------------------------------------+
+bool IsOrderOpen(int numberMagic)
+{
+   for (int i = 0; i < PositionsTotal(); i++)
+   {
+      if (PositionGetSymbol(i) == _Symbol && PositionGetInteger(POSITION_MAGIC) == numberMagic) // Verifica se já existe uma posição no ativo atual
+      {
+         return true; // Já há uma posição aberta, não devemos abrir outra
+      }
+   }
+   return false; // Nenhuma posição aberta, pode abrir uma nova
+}
+
+//+------------------------------------------+
+//|  Função para enviar a ordem ao mercado   |
+//+------------------------------------------+
+bool PlaceOrder(int type, double lotSize, double entryPrice, double stopLoss, double takeProfit, int numberMagic, string strategyType)
+{
+   
+   double volume = lotSize; // Defina o volume da ordem
+
+   double margemLivre = AccountInfoDouble(ACCOUNT_MARGIN_FREE);
+   double margemNecessaria = SymbolInfoDouble(_Symbol, SYMBOL_MARGIN_INITIAL) * volume;
+   
+   if (margemLivre < margemNecessaria) 
+   {
+      Print("Margem insuficiente para abrir a ordem. Livre: ", margemLivre, " Necessária: ", margemNecessaria);
+      return true;
+   }
+
+   MqlTradeRequest request;
+   MqlTradeResult result;
+
+   ZeroMemory(request);
+   request.action = TRADE_ACTION_DEAL;                                    // Executar ordem de mercado
+   request.type = type;                                                   // Compra ou Venda
+   request.symbol = _Symbol;                                              // Pega o ativo atual
+   request.volume = lotSize;                                              // Tamanho do lote
+   request.price = entryPrice;//(type == ORDER_TYPE_BUY) ? Ask : Bid;     // Preço atual
+   request.sl = NormalizeDouble(stopLoss, _Digits);                       // Define Stop Loss em PIPs
+   request.tp = NormalizeDouble(takeProfit, _Digits);                     // Usamos TP fixo, pois não temos o Trailing Stop
+   request.deviation = 10;
+   request.magic = numberMagic;                                           // Diferenciar ordens
+   //request.comment = strategyType+" ("+IntegerToString(numberMagic)+")";  // Para identificar
+   request.comment = strategyType;  // Para identificar
+   //request.type_filling = ORDER_FILLING_FOK;
+   request.type_filling = ORDER_FILLING_IOC;
+   request.type_time = ORDER_TIME_GTC;
+
+   if (!OrderSend(request, result))
+   {
+       Print("Erro ao abrir ordem: ", result.comment);
+       return true;
+   }
+   else
+   {
+       Print("Ordem criada | Price [", entryPrice,"]; SL [", stopLoss,"]; TP [", takeProfit,"]; ");
+       return false;
+   }
+}
+
+//+------------------------------------------+
+//|  Função para aplicar o trailing stop     |
+//+------------------------------------------+
+void ApplyTrailingStop(int numberMagic, double newStopLoss)
+{   
+   if (PositionsTotal() == 0) return;
+   
+   for (int i = 0; i < PositionsTotal(); i++)
+   {
+      ulong ticket = PositionGetTicket(i);
+
+      if (PositionSelectByTicket(ticket) && (PositionGetInteger(POSITION_MAGIC) == numberMagic))
+      {         
+         //ENUM_POSITION_TYPE type = (ENUM_POSITION_TYPE) PositionGetInteger(POSITION_TYPE);
+         //double stopLoss = PositionGetDouble(POSITION_SL);
+         //double newStopLoss = 0;
+         //double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+         //double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+         //double stopLevel = SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL) * _Point;
+                           
+         ModifyStopLoss(ticket, newStopLoss);
+      }
+   }
+}
+
+//+------------------------------------------+
+//|  Função para modificar o stop loss       |
+//+------------------------------------------+
+void ModifyStopLoss(ulong ticket, double newStopLoss)
+{
+
+   double currentSL = PositionGetDouble(POSITION_SL);
+
+    // Evita enviar order se o SL é igual
+    if(NormalizeDouble(currentSL, _Digits) == NormalizeDouble(newStopLoss, _Digits))
+    {
+        Print("SL já está no valor correto. Nenhuma modificação necessária.");
+        return;
+    }
+
+    MqlTradeRequest request;
+    MqlTradeResult result;
+    ZeroMemory(request);
+
+    request.action = TRADE_ACTION_SLTP;
+    request.position = ticket;
+    request.sl = NormalizeDouble(newStopLoss, _Digits);
+    request.tp = PositionGetDouble(POSITION_TP);
+
+    if (!OrderSend(request, result))
+    {
+        Print("Erro ao modificar Stop Loss: ", result.comment);
+    }
 }
