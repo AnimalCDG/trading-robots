@@ -8,56 +8,11 @@
 #property version   "1.00"
 
 #include <Trade/Trade.mqh>
+#include <Indicadores.mqh>
+
+HandlesIndicadores handles;
 
 CTrade trade;
-
-struct PosicaoTrade
-{
-   ulong  ticket;
-   double precoEntrada;
-   double stopLoss;
-   double takeProfit;
-};
-
-enum Tendencia
-{
-   FORTE_BAIXA,
-   BAIXA,
-   LATERAL,
-   ALTA,
-   FORTE_ALTA,
-   ERRO
-};
-
-enum TendenciaMercado
-{
-   MERCADO_FORTE_BAIXA,
-   MERCADO_BAIXA,
-   MERCADO_LATERAL,
-   MERCADO_ALTA,
-   MERCADO_FORTE_ALTA
-};
-
-struct IndicadorTrend
-{
-   double      valorAtual;
-   double      valorAnterior;
-   double      delta;
-   double      slope;
-   int         score;
-   double      forca;   // -100% a +100%
-   bool        subindo;
-   bool        acelerando;
-   Tendencia   tendencia;
-};
-
-double            _sma                 = 0;
-int               handleSMA50          = 0;
-
-double            _ema                 = 0;
-int               handleEMA20          = 0;
-
-int               InpMagicMethodOne    = 10001; /* Número mágico */
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -66,8 +21,15 @@ int OnInit()
 {
    //---
    ChartTemplate();   
-   handleSMA50 = iMA(_Symbol, PERIOD_CURRENT, 50, 0, MODE_SMA, PRICE_CLOSE);
-   handleEMA20 = iMA(_Symbol, PERIOD_CURRENT, 20, 0, MODE_EMA, PRICE_CLOSE);
+   handles.ema20  = iMA(_Symbol,PERIOD_CURRENT,20,0,MODE_EMA,PRICE_CLOSE);
+   //handles.ema50  = iMA(_Symbol,PERIOD_CURRENT,50,0,MODE_EMA,PRICE_CLOSE);
+   //handles.ema100 = iMA(_Symbol,PERIOD_CURRENT,100,0,MODE_EMA,PRICE_CLOSE);
+   //handles.ema200 = iMA(_Symbol,PERIOD_CURRENT,200,0,MODE_EMA,PRICE_CLOSE);
+   
+   //handles.sma20  = iMA(_Symbol,PERIOD_CURRENT,20,0,MODE_SMA,PRICE_CLOSE);
+   //handles.sma50  = iMA(_Symbol,PERIOD_CURRENT,50,0,MODE_SMA,PRICE_CLOSE);
+   //handles.sma100 = iMA(_Symbol,PERIOD_CURRENT,100,0,MODE_SMA,PRICE_CLOSE);
+   //handles.sma200 = iMA(_Symbol,PERIOD_CURRENT,200,0,MODE_SMA,PRICE_CLOSE);
    //---
    return(INIT_SUCCEEDED);
 }
@@ -83,46 +45,24 @@ void OnDeinit(const int reason)
 //| Expert tick function                                             |
 //+------------------------------------------------------------------+
 void OnTick() {
-   Print("Time atual: ", TimeToString(iTime(_Symbol, PERIOD_CURRENT, 0)));
-   double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
-   double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);   
-   _sma = LerMedia(handleSMA50);
-   _ema = LerMedia(handleEMA20);
-   /*
-   Tendencia _tendencia20 = ObterTendencia(handleSMA50, 6);
-   Tendencia _tendencia50 = ObterTendencia(handleEMA20, 6);
-   //Print("SMA20: ", sma20, " T[", _tendencia20, "] | EMA50: ", ema50, " T[", _tendencia50, "]");
-   PrintFormat(
-      "SMA50: %.5f T[%s] | EMA20: %.5f T[%s]",
-      _sma,
-      TendenciaToString(ObterTendencia(handleSMA50)),
-      _ema,
-      TendenciaToString(ObterTendencia(handleEMA20))
-   );
-   */
-   IndicadorTrend ema20 = ObterTrend(handleEMA20, 20);
-   PrintFormat(
-      "EMA20 %.5f | Score=%d | Slope=%.5f | Delta=%.5f | Força=%.5f | %s",
-      ema20.valorAtual,
-      ema20.score,
-      ema20.slope,
-      ema20.delta,
-      ema20.forca,
-      TendenciaToString(ema20.tendencia)
-   );
+   //Print("Time atual: ", TimeToString(iTime(_Symbol, PERIOD_CURRENT, 0)));
    
-   IndicadorTrend sma50 = ObterTrend(handleSMA50, 50);
-   PrintFormat(
-      "SMA50 %.5f | Score=%d | Slope=%.5f | Delta=%.5f | Força=%.5f | %s",
-      sma50.valorAtual,
-      sma50.score,
-      sma50.slope,
-      sma50.delta,
-      sma50.forca,
-      TendenciaToString(sma50.tendencia)
-   );
+   Indicadores indicadores = ObterIndicadores(handles);
+
+   TendenciaMercado mercado =
+      AvaliarMercado(
+         indicadores.ema20,
+         indicadores.sma50);
    
-   NegociacaoMetodoUm(ema20, sma50);
+   if(mercado==MERCADO_FORTE_ALTA)
+   {
+      Print("Comprar");
+   }
+   
+   if(mercado==MERCADO_FORTE_BAIXA)
+   {
+      Print("Vender");
+   }
    
 }
 //+------------------------------------------------------------------+
@@ -160,466 +100,162 @@ void DrawLine(
    }
 }
 
-double LerMedia(int handle)
-{
-   double buffer[];
-
-   if(CopyBuffer(handle, 0, 0, 3, buffer) <= 0)
-      return EMPTY_VALUE;
-   
-   //for(int i = 0; i < buffer.Size(); i++)
-   //{
-   //   PrintFormat("media[%d] = %.5f", i, buffer[i]);
-   //}
-
-   return buffer[0];
-}
-
-Tendencia ObterTendencia(int handle, int candles = 3)
-{
-   double media[];
-
-   ArrayResize(media, candles);
-
-   if(CopyBuffer(handle, 0, 0, candles, media) != candles)
-      return ERRO;
-      
-   int score = 0;
-
-   for(int i = 0; i < candles - 1; i++)
-   {
-      if(media[i] > media[i + 1])
-         score++;
-      else if(media[i] < media[i + 1])
-         score--;
-   }
-
-   int maxScore = candles - 1;
-
-   if(score >= maxScore - 1)
-      return FORTE_ALTA;
-
-   if(score > 0)
-      return ALTA;
-
-   if(score <= -(maxScore - 1))
-      return FORTE_BAIXA;
-
-   if(score < 0)
-      return BAIXA;
-
-   return LATERAL;
-}
-
-string TendenciaToString(Tendencia t)
-{
-   switch(t)
-   {
-      case FORTE_BAIXA: return "↓↓ Forte Baixa";
-      case BAIXA:       return "↓ Baixa";
-      case LATERAL:     return "→ Lateral";
-      case ALTA:        return "↑ Alta";
-      case FORTE_ALTA:  return "↑↑ Forte Alta";
-      case ERRO:        return "Erro";
-   }
-
-   return "Desconhecida";
-}
-
-IndicadorTrend ObterTrendOld(int handle, int candles = 6)
+IndicadorTrend ObterTrend(int handle,int candles=20)
 {
    IndicadorTrend trend;
 
-   trend.valorAtual    = EMPTY_VALUE;
-   trend.valorAnterior = EMPTY_VALUE;
-   trend.delta         = 0;
-   trend.slope         = 0;
-   trend.score         = 0;
-   trend.tendencia     = ERRO;
+   trend.valorAtual=EMPTY_VALUE;
+   trend.valorAnterior=EMPTY_VALUE;
+
+   trend.delta=0;
+   trend.slope=0;
+
+   trend.score=0;
+   trend.forca=0;
+
+   trend.subindo=false;
+   trend.acelerando=false;
+
+   trend.tendencia=ERRO;
 
    double media[];
 
-   ArrayResize(media, candles);
-   ArraySetAsSeries(media, true);
+   ArrayResize(media,candles);
+   ArraySetAsSeries(media,true);
 
-   if(CopyBuffer(handle, 0, 0, candles, media) != candles)
-      return trend;
-   /*   
-   Print("----------------------------");
-
-   for(int i = 0; i < candles; i++)
-   {
-      PrintFormat(
-         "media[%02d] = %.5f",
-         i,
-         media[i]
-      );
-   }
-   */
-   trend.valorAtual = media[0];
-   trend.valorAnterior = media[1];
-
-   int score = 0;
-   int scoreMaximo = 0;
-   
-   for (int i = 0; i < candles - 1; i++)
-   {
-      scoreMaximo += (candles - i);
-       int peso = candles - 1 - i; // mais recente = maior peso
-   
-       if (media[i] > media[i + 1])
-           score += peso;
-       else if (media[i] < media[i + 1])
-           score -= peso;
-   }
-   
-   /* INVERTIDO
-   for (int i = 0; i < candles - 1; i++)
-   {
-      scoreMaximo += (candles - i);
-       int peso = candles - 1 - i; // mais recente = maior peso
-   
-       if (media[i] < media[i + 1])
-           score += peso;
-       else if (media[i] > media[i + 1])
-           score -= peso;
-   }
-   */
-   trend.score = score;
-
-   trend.delta = media[0] - media[candles-1];
-   //trend.delta = media[candles - 1] - media[0]; //INVERTIDO
-
-   trend.slope = trend.delta / (candles-1);
-   
-   trend.forca = (100.0 * score) / scoreMaximo;
-
-   int maxScore = candles - 1;
-
-   if(score >= maxScore - 1)
-      trend.tendencia = FORTE_ALTA;
-   else
-   if(score > 0)
-      trend.tendencia = ALTA;
-   else
-   if(score <= -(maxScore - 1))
-      trend.tendencia = FORTE_BAIXA;
-   else
-   if(score < 0)
-      trend.tendencia = BAIXA;
-   else
-      trend.tendencia = LATERAL;
-
-   return trend;
-}
-
-IndicadorTrend ObterTrend(int handle, int candles = 20)
-{
-   IndicadorTrend trend;
-
-   trend.valorAtual    = EMPTY_VALUE;
-   trend.valorAnterior = EMPTY_VALUE;
-   trend.delta         = 0;
-   trend.slope         = 0;
-   trend.score         = 0;
-   trend.forca         = 0;
-   trend.tendencia     = ERRO;
-   trend.subindo       = false;
-   trend.acelerando    = false;
-
-   double media[];
-
-   ArrayResize(media, candles);
-   ArraySetAsSeries(media, true);
-
-   if(CopyBuffer(handle, 0, 0, candles, media) != candles)
+   if(CopyBuffer(handle,0,0,candles,media)!=candles)
       return trend;
 
-   trend.valorAtual    = media[0];
-   trend.valorAnterior = media[1];
+   trend.valorAtual=media[0];
+   trend.valorAnterior=media[1];
 
-   trend.subindo = media[0] > media[1];
+   trend.subindo=(media[0]>media[1]);
 
-   if(candles >= 3)
-      trend.acelerando =
-         MathAbs(media[0]-media[1]) >
+   if(candles>=3)
+   {
+      trend.acelerando=
+         MathAbs(media[0]-media[1])>
          MathAbs(media[1]-media[2]);
+   }
 
-   int score = 0;
-   int scoreMaximo = 0;
+   int score=0;
+   int scoreMaximo=0;
 
    for(int i=0;i<candles-1;i++)
    {
-      int peso = candles-1-i;
+      int peso=candles-1-i;
 
-      scoreMaximo += peso;
+      scoreMaximo+=peso;
 
-      if(media[i] > media[i+1])
-         score += peso;
+      if(media[i]>media[i+1])
+         score+=peso;
       else
-      if(media[i] < media[i+1])
-         score -= peso;
+      if(media[i]<media[i+1])
+         score-=peso;
    }
 
-   trend.score = score;
+   trend.score=score;
 
-   trend.delta = media[0] - media[candles-1];
+   trend.delta=media[0]-media[candles-1];
 
-   trend.slope = trend.delta / (candles-1);
+   trend.slope=trend.delta/(candles-1);
 
-   trend.forca = (100.0 * score) / scoreMaximo;
+   trend.forca=(100.0*score)/scoreMaximo;
 
-   if(trend.forca >= 80)
-      trend.tendencia = FORTE_ALTA;
+   if(trend.forca>=80)
+      trend.tendencia=FORTE_ALTA;
    else
-   if(trend.forca >= 30)
-      trend.tendencia = ALTA;
+   if(trend.forca>=30)
+      trend.tendencia=ALTA;
    else
-   if(trend.forca <= -80)
-      trend.tendencia = FORTE_BAIXA;
+   if(trend.forca<=-80)
+      trend.tendencia=FORTE_BAIXA;
    else
-   if(trend.forca <= -30)
-      trend.tendencia = BAIXA;
+   if(trend.forca<=-30)
+      trend.tendencia=BAIXA;
    else
-      trend.tendencia = LATERAL;
+      trend.tendencia=LATERAL;
 
    return trend;
 }
 
-TendenciaMercado AvaliarMercado(const IndicadorTrend &ema20, const IndicadorTrend &sma50)
+Indicadores ObterIndicadores(HandlesIndicadores &handles)
 {
-   int score = 0;
+   Indicadores ind;
 
-   //-------------------------
-   // EMA20 x SMA50
-   //-------------------------
-   if(ema20.valorAtual > sma50.valorAtual)
-      score += 40;
+   ind.ema20  = ObterTrend(handles.ema20,20);
+   ind.ema50  = ObterTrend(handles.ema50,20);
+   ind.ema100 = ObterTrend(handles.ema100,20);
+   ind.ema200 = ObterTrend(handles.ema200,20);
+
+   ind.sma20  = ObterTrend(handles.sma20,20);
+   ind.sma50  = ObterTrend(handles.sma50,20);
+   ind.sma100 = ObterTrend(handles.sma100,20);
+   ind.sma200 = ObterTrend(handles.sma200,20);
+
+   return ind;
+}
+
+TendenciaMercado AvaliarMercado(
+   IndicadorTrend &ema20,
+   IndicadorTrend &sma50)
+{
+   int score=0;
+
+   const double LIMIAR=0.00005;
+
+   //-----------------------------
+   // EMA20 acima SMA50
+   //-----------------------------
+
+   if(ema20.valorAtual>sma50.valorAtual)
+      score+=40;
    else
-      score -= 40;
+      score-=40;
 
-   //-------------------------
-   // Inclinação EMA20
-   //-------------------------
-   const double LIMIAR = 0.00005;
+   //-----------------------------
+   // EMA20 inclinada
+   //-----------------------------
 
-   if(ema20.slope > LIMIAR)
-      score += 30;
+   if(ema20.slope>LIMIAR)
+      score+=30;
    else
-   if(ema20.slope < -LIMIAR)
-      score -= 30;
+   if(ema20.slope<-LIMIAR)
+      score-=30;
 
-   //-------------------------
-   // Inclinação SMA50
-   //-------------------------
-   if(sma50.slope > LIMIAR)
-      score += 20;
+   //-----------------------------
+   // SMA50 inclinada
+   //-----------------------------
+
+   if(sma50.slope>LIMIAR)
+      score+=20;
    else
-   if(sma50.slope < -LIMIAR)
-      score -= 20;
+   if(sma50.slope<-LIMIAR)
+      score-=20;
 
-   //-------------------------
-   // Força da EMA20
-   //-------------------------
-   if(ema20.forca > 70)
-      score += 10;
+   //-----------------------------
+   // força EMA20
+   //-----------------------------
+
+   if(ema20.forca>70)
+      score+=10;
    else
-   if(ema20.forca < -70)
-      score -= 10;
+   if(ema20.forca<-70)
+      score-=10;
 
-   //-------------------------
-   // Classificação
-   //-------------------------
-   if(score >= 80)
+   //-----------------------------
+
+   if(score>=80)
       return MERCADO_FORTE_ALTA;
 
-   if(score >= 30)
+   if(score>=30)
       return MERCADO_ALTA;
 
-   if(score <= -80)
+   if(score<=-80)
       return MERCADO_FORTE_BAIXA;
 
-   if(score <= -30)
+   if(score<=-30)
       return MERCADO_BAIXA;
 
    return MERCADO_LATERAL;
-}
-
-void NegociacaoMetodoUm(const IndicadorTrend &ema20, const IndicadorTrend &sma50)
-{
-   double takeProfit = 0.0;
-   //TESTE
-      double takeProfit1 = 0.0;
-      double takeProfit2 = 0.0;
-      double takeProfit3 = 0.0;
-   double gainTwoThirds = 0.0;
-   double gainThreeThirds = 0.0;
-   double stopLoss = 0.0;
-   
-   double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
-   double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
-      
-   //Print("sma50.tendencia: ", sma50.tendencia, "ema20.tendencia: ", ema20.tendencia);
-   if((ema20.tendencia == BAIXA && (sma50.tendencia == FORTE_ALTA || sma50.tendencia == ALTA)) && (ema20.valorAtual < sma50.valorAtual)) 
-   {
-      if(IsOrderOpen(InpMagicMethodOne) == false)
-      {
-         Print("OPERAR VENDIDO USANDO EMA20");
-         stopLoss = bid + (bid * 0.02);
-         takeProfit1 = bid - (bid * 0.0066);
-         takeProfit2 = bid - (bid * 0.0133);
-         takeProfit3 = bid - (bid * 0.0198);
-         
-         takeProfit = bid - (bid * 0.0066);
-         PlaceOrder(ORDER_TYPE_SELL, 0.01, bid, stopLoss, takeProfit, InpMagicMethodOne, "Estratégia Método 01 1/3");
-         
-         takeProfit = bid - (bid * 0.0133);
-         PlaceOrder(ORDER_TYPE_SELL, 0.01, bid, stopLoss, takeProfit, InpMagicMethodOne, "Estratégia Método 01 2/3");
-         
-         takeProfit = bid - (bid * 0.02);
-         PlaceOrder(ORDER_TYPE_SELL, 0.01, bid, stopLoss, takeProfit, InpMagicMethodOne, "Estratégia Método 01 3/3");
-         
-         PrintFormat(
-            "BID %.5f | SL=%.5f | TP1=%.5f | TP2=%.5f | TP3=%.5f",
-            bid,
-            stopLoss,
-            takeProfit1,
-            takeProfit2,
-            takeProfit3
-         );
-      }
-   }
-   
-   if(IsOrderOpen(InpMagicMethodOne) == true) 
-   {
-      //ApplyTrailingStop(InpMagicMethodOne, sma50.valorAtual);
-   }   
-   
-   //Teste
-   if(sma50.tendencia == 4) {
-      //Print("OPERAR COMPRA USANDO SMA50");
-   }
-   
-   //Teste
-   if(sma50.valorAtual == ema20.valorAtual) {
-      //Print("Operar");
-   }
-}
-
-//+------------------------------------------------------+
-//|  Função que verifica se já existe uma ordem aberta   |
-//+------------------------------------------------------+
-bool IsOrderOpen(int numberMagic)
-{
-   for (int i = 0; i < PositionsTotal(); i++)
-   {
-      if (PositionGetSymbol(i) == _Symbol && PositionGetInteger(POSITION_MAGIC) == numberMagic) // Verifica se já existe uma posição no ativo atual
-      {
-         return true; // Já há uma posição aberta, não devemos abrir outra
-      }
-   }
-   return false; // Nenhuma posição aberta, pode abrir uma nova
-}
-
-//+------------------------------------------+
-//|  Função para enviar a ordem ao mercado   |
-//+------------------------------------------+
-bool PlaceOrder(int type, double lotSize, double entryPrice, double stopLoss, double takeProfit, int numberMagic, string strategyType)
-{
-   
-   double volume = lotSize; // Defina o volume da ordem
-
-   double margemLivre = AccountInfoDouble(ACCOUNT_MARGIN_FREE);
-   double margemNecessaria = SymbolInfoDouble(_Symbol, SYMBOL_MARGIN_INITIAL) * volume;
-   
-   if (margemLivre < margemNecessaria) 
-   {
-      Print("Margem insuficiente para abrir a ordem. Livre: ", margemLivre, " Necessária: ", margemNecessaria);
-      return true;
-   }
-
-   MqlTradeRequest request;
-   MqlTradeResult result;
-
-   ZeroMemory(request);
-   request.action = TRADE_ACTION_DEAL;                                    // Executar ordem de mercado
-   request.type = type;                                                   // Compra ou Venda
-   request.symbol = _Symbol;                                              // Pega o ativo atual
-   request.volume = lotSize;                                              // Tamanho do lote
-   request.price = entryPrice;//(type == ORDER_TYPE_BUY) ? Ask : Bid;     // Preço atual
-   request.sl = NormalizeDouble(stopLoss, _Digits);                       // Define Stop Loss em PIPs
-   request.tp = NormalizeDouble(takeProfit, _Digits);                     // Usamos TP fixo, pois não temos o Trailing Stop
-   request.deviation = 10;
-   request.magic = numberMagic;                                           // Diferenciar ordens
-   //request.comment = strategyType+" ("+IntegerToString(numberMagic)+")";  // Para identificar
-   request.comment = strategyType;  // Para identificar
-   //request.type_filling = ORDER_FILLING_FOK;
-   request.type_filling = ORDER_FILLING_IOC;
-   request.type_time = ORDER_TIME_GTC;
-
-   if (!OrderSend(request, result))
-   {
-       Print("Erro ao abrir ordem: ", result.comment);
-       return true;
-   }
-   else
-   {
-       Print("Ordem criada | Price [", entryPrice,"]; SL [", stopLoss,"]; TP [", takeProfit,"]; ");
-       return false;
-   }
-}
-
-//+------------------------------------------+
-//|  Função para aplicar o trailing stop     |
-//+------------------------------------------+
-void ApplyTrailingStop(int numberMagic, double newStopLoss)
-{   
-   if (PositionsTotal() == 0) return;
-   
-   for (int i = 0; i < PositionsTotal(); i++)
-   {
-      ulong ticket = PositionGetTicket(i);
-
-      if (PositionSelectByTicket(ticket) && (PositionGetInteger(POSITION_MAGIC) == numberMagic))
-      {         
-         //ENUM_POSITION_TYPE type = (ENUM_POSITION_TYPE) PositionGetInteger(POSITION_TYPE);
-         //double stopLoss = PositionGetDouble(POSITION_SL);
-         //double newStopLoss = 0;
-         //double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
-         //double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
-         //double stopLevel = SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL) * _Point;
-                           
-         ModifyStopLoss(ticket, newStopLoss);
-      }
-   }
-}
-
-//+------------------------------------------+
-//|  Função para modificar o stop loss       |
-//+------------------------------------------+
-void ModifyStopLoss(ulong ticket, double newStopLoss)
-{
-
-   double currentSL = PositionGetDouble(POSITION_SL);
-
-    // Evita enviar order se o SL é igual
-    if(NormalizeDouble(currentSL, _Digits) == NormalizeDouble(newStopLoss, _Digits))
-    {
-        Print("SL já está no valor correto. Nenhuma modificação necessária.");
-        return;
-    }
-
-    MqlTradeRequest request;
-    MqlTradeResult result;
-    ZeroMemory(request);
-
-    request.action = TRADE_ACTION_SLTP;
-    request.position = ticket;
-    request.sl = NormalizeDouble(newStopLoss, _Digits);
-    request.tp = PositionGetDouble(POSITION_TP);
-
-    if (!OrderSend(request, result))
-    {
-        Print("Erro ao modificar Stop Loss: ", result.comment);
-    }
 }
