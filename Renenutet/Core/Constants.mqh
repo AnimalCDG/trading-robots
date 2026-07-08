@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                                        Enums.mqh |
+//|                                                    Constants.mqh |
 //|                                  Copyright 2024, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
@@ -25,24 +25,9 @@
 //   string ErrorDescription(int error_code);
 // #import
 //+------------------------------------------------------------------+
-#ifndef __ENUMS_MQH__
-#define __ENUMS_MQH__
+#ifndef __CONSTANTS_MQH__
+#define __CONSTANTS_MQH__
 
-enum Tendencia
-{
-   ERRO = -1,
-
-   FORTE_BAIXA = 0,
-   BAIXA,
-   LATERAL,
-   ALTA,
-   FORTE_ALTA
-};
-
-enum TipoMedia
-{
-   SMA = 0,
-   EMA
-};
+#define LIMIAR_SLOPE 0.00005
 
 #endif

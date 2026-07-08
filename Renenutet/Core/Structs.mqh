@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                                        Enums.mqh |
+//|                                                      Structs.mqh |
 //|                                  Copyright 2024, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
@@ -25,24 +25,40 @@
 //   string ErrorDescription(int error_code);
 // #import
 //+------------------------------------------------------------------+
-#ifndef __ENUMS_MQH__
-#define __ENUMS_MQH__
+#ifndef __STRUCTS_MQH__
+#define __STRUCTS_MQH__
 
-enum Tendencia
+#include "Enums.mqh"
+
+struct IndicadorTrend
 {
-   ERRO = -1,
+   double valorAtual;
+   double valorAnterior;
 
-   FORTE_BAIXA = 0,
-   BAIXA,
-   LATERAL,
-   ALTA,
-   FORTE_ALTA
+   double delta;
+   double slope;
+
+   int score;
+
+   double forca;
+
+   bool subindo;
+   bool acelerando;
+
+   Tendencia tendencia;
 };
 
-enum TipoMedia
+struct MediaMovel
 {
-   SMA = 0,
-   EMA
+   string nome;
+
+   TipoMedia tipo;
+
+   int periodo;
+
+   int handle;
+
+   IndicadorTrend trend;
 };
 
 #endif

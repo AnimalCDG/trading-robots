@@ -1,5 +1,5 @@
-//+------------------------------------------------------------------+
-//|                                                        Enums.mqh |
+﻿//+------------------------------------------------------------------+
+//|                                                        Utils.mqh |
 //|                                  Copyright 2024, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
@@ -25,24 +25,30 @@
 //   string ErrorDescription(int error_code);
 // #import
 //+------------------------------------------------------------------+
-#ifndef __ENUMS_MQH__
-#define __ENUMS_MQH__
+#ifndef __UTILS_MQH__
+#define __UTILS_MQH__
 
-enum Tendencia
+#include "Enums.mqh"
+
+string TendenciaToString(Tendencia tendencia)
 {
-   ERRO = -1,
+   switch(tendencia)
+   {
+      case FORTE_ALTA:  return "↑↑ Forte Alta";
+      case ALTA:        return "↑ Alta";
+      case LATERAL:     return "→ Lateral";
+      case BAIXA:       return "↓ Baixa";
+      case FORTE_BAIXA: return "↓↓ Forte Baixa";
+      default:          return "Erro";
+   }
+}
 
-   FORTE_BAIXA = 0,
-   BAIXA,
-   LATERAL,
-   ALTA,
-   FORTE_ALTA
-};
-
-enum TipoMedia
+string TipoMediaToString(TipoMedia tipo)
 {
-   SMA = 0,
-   EMA
-};
+   if(tipo == EMA)
+      return "EMA";
+
+   return "SMA";
+}
 
 #endif
