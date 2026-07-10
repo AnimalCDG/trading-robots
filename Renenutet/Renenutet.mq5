@@ -9,6 +9,7 @@
 
 #include "Core/ChartRenderer.mqh"
 #include "Indicators/MovingAverage.mqh"
+#include "Indicators/PriceLevels.mqh"
 
 MediaMovel ema20 =
 {
@@ -17,12 +18,45 @@ MediaMovel ema20 =
    20
 };
 
+MediaMovel ema50 =
+{
+   "EMA50",
+   EMA,
+   50
+};
+
+MediaMovel ema100 =
+{
+   "EMA100",
+   EMA,
+   100
+};
+
+MediaMovel ema200 =
+{
+   "EMA200",
+   EMA,
+   200
+};
+
 MediaMovel sma50 =
 {
    "SMA50",
    SMA,
    50
 };
+
+ResistenciaSuporte sr37 = {
+   "03_07",
+   3,
+   7
+};
+
+double resistencia;
+double suporte;
+
+double min03_07 = 0;
+double max03_07 = 0;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -34,7 +68,14 @@ int OnInit()
    ChartTemplate();
    
    InicializarMedia(ema20);
-   InicializarMedia(sma50);   
+   InicializarMedia(ema50);
+   InicializarMedia(ema100);
+   InicializarMedia(ema200);
+   InicializarMedia(sma50);
+   
+   InicializarNivelPreco(sr37);
+   DrawLine(sr37.suporte.nome, sr37.suporte.cor, sr37.suporte.style, sr37.suporte.valor);
+   DrawLine(sr37.resistencia.nome, sr37.resistencia.cor, sr37.resistencia.style, sr37.resistencia.valor);
    
    //---
    return(INIT_SUCCEEDED);
@@ -55,10 +96,22 @@ void OnTick()
 {
    //---
    
+   AtualizarNivelPreco(sr37);
+   DrawLine(sr37.suporte.nome, sr37.suporte.cor, sr37.suporte.style, sr37.suporte.valor);
+   DrawLine(sr37.resistencia.nome, sr37.resistencia.cor, sr37.resistencia.style, sr37.resistencia.valor);
+   
+   PrintPriceLevel(sr37);
+   
    AtualizarMedia(ema20);
+   AtualizarMedia(ema50);   
+   AtualizarMedia(ema100);
+   AtualizarMedia(ema200);
    AtualizarMedia(sma50);
    
    PrintMedia(ema20);
+   PrintMedia(ema50);
+   PrintMedia(ema100);
+   PrintMedia(ema200);
    PrintMedia(sma50);
    
    //---   

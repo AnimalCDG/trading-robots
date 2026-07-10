@@ -39,4 +39,26 @@ void ChartTemplate()
    ChartSetInteger(0, CHART_COLOR_CHART_DOWN, clrPlum);        // Define a cor do contorno das velas de baixa como vermelho
 }
 
+void DrawLine(
+   string name_line, 
+   color color_type,
+   int drawing_styles,
+   double preco)
+{
+   // Se a linha não existir, cria
+   if(ObjectFind(0, name_line) == -1)
+   {
+      ObjectCreate(0, name_line, OBJ_HLINE, 0, 0, preco);
+      ObjectSetInteger(0, name_line, OBJPROP_COLOR, color_type);
+      ObjectSetInteger(0, name_line, OBJPROP_WIDTH, 2);
+      ObjectSetInteger(0, name_line, OBJPROP_STYLE, drawing_styles);
+   }
+   else
+   {
+      // Atualiza preço e cor
+      ObjectSetDouble(0, name_line, OBJPROP_PRICE, preco);
+      ObjectSetInteger(0, name_line, OBJPROP_COLOR, color_type);
+   }
+}
+
 #endif

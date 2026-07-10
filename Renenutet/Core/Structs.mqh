@@ -61,4 +61,29 @@ struct MediaMovel
    IndicadorTrend trend;
 };
 
+struct ValorSuporte
+{
+   string nome;
+   double valor;
+   color cor;
+   int style;
+};
+
+struct ValorResistente
+{
+   string nome;
+   double valor;
+   color cor;
+   int style;
+};
+
+struct ResistenciaSuporte
+{
+   string nome;
+   int min;
+   int max;
+   ValorSuporte suporte;
+   ValorResistente resistencia;
+};
+
 #endif

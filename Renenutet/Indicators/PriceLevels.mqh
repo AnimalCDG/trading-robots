@@ -25,8 +25,8 @@
 //   string ErrorDescription(int error_code);
 // #import
 //+------------------------------------------------------------------+
-#ifndef __MOVINGAVERAGE_MQH__
-#define __MOVINGAVERAGE_MQH__
+#ifndef __PRICELEVES_MQH__
+#define __PRICELEVES_MQH__
 
 #include "../Core/Enums.mqh"
 #include "../Core/Structs.mqh"
@@ -36,9 +36,21 @@
 //+------------------------------------------------------------------+
 //| Inicializar uma média.                                           |
 //+------------------------------------------------------------------+
-bool InicializarMedia(
-   MediaMovel &media)
+bool InicializarNivelPreco(
+   ResistenciaSuporte &rs)
 {
+   /*
+   rs.suporte.nome = "MIN_" + rs.nome;
+   rs.suporte.cor = clrRed;
+   rs.suporte.valor = ObterMenorMinima(rs.min);
+
+   rs.resistencia.nome = "MAX_" + rs.nome;
+   rs.resistencia.cor = clrGreen;
+   rs.resistencia.valor = ObterMaiorMaxima(rs.max);
+   */
+   AtualizarNivelPreco(rs);
+
+   /*
    ENUM_MA_METHOD metodo =
       media.tipo == EMA ? MODE_EMA : MODE_SMA;
 
@@ -52,98 +64,80 @@ bool InicializarMedia(
          PRICE_CLOSE);
 
    return (media.handle != INVALID_HANDLE);
+   */
+   return true;
 }
 
-//+------------------------------------------------------------------+
-//| Analisar uma média.                                              |
-//| Esse será basicamente o seu ObterTrend(), adaptado para          |
-//| receber uma MediaMovel.                                          |
-//+------------------------------------------------------------------+
-bool AtualizarMedia(
-   MediaMovel &media,
-   int candles = 20)
+bool AtualizarNivelPreco(ResistenciaSuporte &rs)
+{
+   rs.suporte.nome = "MIN_" + rs.nome;
+   rs.suporte.cor = clrRed;
+   rs.suporte.valor = ObterMenorMinima(rs.min);
+
+   rs.resistencia.nome = "MAX_" + rs.nome;
+   rs.resistencia.cor = clrGreen;
+   rs.resistencia.valor = ObterMaiorMaxima(rs.max);
+   
+   return true;
+}
+
+double ObterNivelPreco(TipoNivelPreco tipo, int periodo)
 {
    double valores[];
 
-   ArrayResize(valores,candles);
-   ArraySetAsSeries(valores,true);
+   int lidos;
 
-   if(CopyBuffer(media.handle,0,0,candles,valores)!=candles)
-      return false;
+   if(tipo == HIGH)
+      lidos = CopyHigh(_Symbol, _Period, 1, periodo, valores);
+   else
+      lidos = CopyLow(_Symbol, _Period, 1, periodo, valores);
 
-   IndicadorTrend trend;
+   if(lidos <= 0)
+      return EMPTY_VALUE;
 
-   trend.valorAtual=valores[0];
-   trend.valorAnterior=valores[1];
+   double nivel = valores[0];
 
-   trend.subindo=valores[0]>valores[1];
-
-   if(candles>=3)
+   for(int i = 1; i < ArraySize(valores); i++)
    {
-      trend.acelerando=
-         MathAbs(valores[0]-valores[1])>
-         MathAbs(valores[1]-valores[2]);
-   }
-
-   int score=0;
-   int scoreMaximo=0;
-
-   for(int i=0;i<candles-1;i++)
-   {
-      int peso=candles-1-i;
-
-      scoreMaximo+=peso;
-
-      if(valores[i]>valores[i+1])
-         score+=peso;
+      if(tipo == HIGH)
+      {
+         if(valores[i] > nivel)
+            nivel = valores[i];
+      }
       else
-      if(valores[i]<valores[i+1])
-         score-=peso;
+      {
+         if(valores[i] < nivel)
+            nivel = valores[i];
+      }
    }
 
-   trend.score=score;
+   return nivel;
+}
 
-   trend.delta=valores[0]-valores[candles-1];
+double ObterMaiorMaxima(int periodo)
+{
+   return ObterNivelPreco(HIGH, periodo);
+}
 
-   trend.slope=trend.delta/(candles-1);
-
-   trend.forca=(100.0*score)/scoreMaximo;
-
-   if(trend.forca>=80)
-      trend.tendencia=FORTE_ALTA;
-   else
-   if(trend.forca>=30)
-      trend.tendencia=ALTA;
-   else
-   if(trend.forca<=-80)
-      trend.tendencia=FORTE_BAIXA;
-   else
-   if(trend.forca<=-30)
-      trend.tendencia=BAIXA;
-   else
-      trend.tendencia=LATERAL;
-
-   media.trend=trend;
-
-   return true;
+double ObterMenorMinima(int periodo)
+{
+   return ObterNivelPreco(LOW, periodo);
 }
 
 //+------------------------------------------------------------------+
 //| Imprimir uma média.                                              |
 //+------------------------------------------------------------------+
-void PrintMedia(MediaMovel &media)
+void PrintPriceLevel(ResistenciaSuporte &rs)
 {
    PrintFormat(
-      "%s%d %.5f | Delta=%.5f | Score=%d | Slope=%.5f | Força=%.2f | %s",
-      TipoMediaToString(media.tipo),
-      media.periodo,
-      media.trend.valorAtual,
-      media.trend.delta,
-      media.trend.score,
-      media.trend.slope,
-      media.trend.forca,
-      TendenciaToString(media.trend.tendencia)
+      "%s | MIN=%.5f (%d) | MIN=%.5f (%d)",
+      rs.nome,
+      rs.suporte.valor,
+      rs.min,
+      rs.resistencia.valor,
+      rs.max
    );
 }
+
 
 #endif

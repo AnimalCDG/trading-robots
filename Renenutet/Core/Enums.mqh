@@ -45,4 +45,10 @@ enum TipoMedia
    EMA
 };
 
+enum TipoNivelPreco
+{
+   HIGH,
+   LOW
+};
+
 #endif
