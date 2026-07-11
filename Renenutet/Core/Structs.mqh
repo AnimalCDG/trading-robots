@@ -5,26 +5,6 @@
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2024, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"
-//+------------------------------------------------------------------+
-//| defines                                                          |
-//+------------------------------------------------------------------+
-// #define MacrosHello   "Hello, world!"
-// #define MacrosYear    2010
-//+------------------------------------------------------------------+
-//| DLL imports                                                      |
-//+------------------------------------------------------------------+
-// #import "user32.dll"
-//   int      SendMessageA(int hWnd,int Msg,int wParam,int lParam);
-// #import "my_expert.dll"
-//   int      ExpertRecalculate(int wParam,int lParam);
-// #import
-//+------------------------------------------------------------------+
-//| EX5 imports                                                      |
-//+------------------------------------------------------------------+
-// #import "stdlib.ex5"
-//   string ErrorDescription(int error_code);
-// #import
-//+------------------------------------------------------------------+
 #ifndef __STRUCTS_MQH__
 #define __STRUCTS_MQH__
 
@@ -61,15 +41,7 @@ struct MediaMovel
    IndicadorTrend trend;
 };
 
-struct ValorSuporte
-{
-   string nome;
-   double valor;
-   color cor;
-   int style;
-};
-
-struct ValorResistente
+struct ValorSR
 {
    string nome;
    double valor;
@@ -82,8 +54,23 @@ struct ResistenciaSuporte
    string nome;
    int min;
    int max;
-   ValorSuporte suporte;
-   ValorResistente resistencia;
+   bool exibirObjeto;
+   ValorSR suporte;
+   ValorSR resistencia;
+};
+
+struct SConfigEntrada
+{
+   double precoGatilho;   // 1.300
+   double loteCompra;     // 0.03
+   long   magic;
+};
+
+struct SConfigVenda
+{
+   double lote;           // 0.01
+   double slPercent;      // 10%
+   double tpPercent;      // 0.033% / 0.066% / 0.01%
 };
 
 #endif

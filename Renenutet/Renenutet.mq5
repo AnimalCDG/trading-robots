@@ -1,4 +1,4 @@
-//+------------------------------------------------------------------+
+﻿//+------------------------------------------------------------------+
 //|                                                    Renenutet.mq5 |
 //|                                  Copyright 2024, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
@@ -7,9 +7,10 @@
 #property link      "https://www.mql5.com"
 #property version   "1.00"
 
-#include "Core/ChartRenderer.mqh"
+#include "Core/Enums.mqh"
 #include "Indicators/MovingAverage.mqh"
 #include "Indicators/PriceLevels.mqh"
+#include "Trading/Trading.mqh"
 
 MediaMovel ema20 =
 {
@@ -39,6 +40,13 @@ MediaMovel ema200 =
    200
 };
 
+MediaMovel sma20 =
+{
+   "SMA20",
+   SMA,
+   20
+};
+
 MediaMovel sma50 =
 {
    "SMA50",
@@ -49,7 +57,8 @@ MediaMovel sma50 =
 ResistenciaSuporte sr37 = {
    "03_07",
    3,
-   7
+   3,
+   true
 };
 
 double resistencia;
@@ -68,14 +77,13 @@ int OnInit()
    ChartTemplate();
    
    InicializarMedia(ema20);
-   InicializarMedia(ema50);
-   InicializarMedia(ema100);
-   InicializarMedia(ema200);
-   InicializarMedia(sma50);
+   //InicializarMedia(ema50);
+   //InicializarMedia(ema100);
+   //InicializarMedia(ema200);
+   InicializarMedia(sma20); //Teste
+   //InicializarMedia(sma50);
    
    InicializarNivelPreco(sr37);
-   DrawLine(sr37.suporte.nome, sr37.suporte.cor, sr37.suporte.style, sr37.suporte.valor);
-   DrawLine(sr37.resistencia.nome, sr37.resistencia.cor, sr37.resistencia.style, sr37.resistencia.valor);
    
    //---
    return(INIT_SUCCEEDED);
@@ -95,24 +103,33 @@ void OnDeinit(const int reason)
 void OnTick()
 {
    //---
-   
+
    AtualizarNivelPreco(sr37);
-   DrawLine(sr37.suporte.nome, sr37.suporte.cor, sr37.suporte.style, sr37.suporte.valor);
-   DrawLine(sr37.resistencia.nome, sr37.resistencia.cor, sr37.resistencia.style, sr37.resistencia.valor);
    
    PrintPriceLevel(sr37);
    
+   double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+   double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   
+   if( (ema20.trend.tendencia == FORTE_ALTA) || (ema20.trend.tendencia == ALTA) && (sma20.trend.tendencia == FORTE_ALTA) || (sma20.trend.tendencia == ALTA)) {
+      if(bid <= sr37.suporte.valor) {
+         Print("OPERAÇÃO DE COMPRA [", bid, "]");
+      }
+   }
+   
    AtualizarMedia(ema20);
-   AtualizarMedia(ema50);   
-   AtualizarMedia(ema100);
-   AtualizarMedia(ema200);
-   AtualizarMedia(sma50);
+   //AtualizarMedia(ema50);   
+   //AtualizarMedia(ema100);
+   //AtualizarMedia(ema200);
+   AtualizarMedia(sma20); //Teste
+   //AtualizarMedia(sma50);
    
    PrintMedia(ema20);
-   PrintMedia(ema50);
-   PrintMedia(ema100);
-   PrintMedia(ema200);
-   PrintMedia(sma50);
+   //PrintMedia(ema50);
+   //PrintMedia(ema100);
+   //PrintMedia(ema200);
+   PrintMedia(sma20); //Teste
+   //PrintMedia(sma50);
    
    //---   
 }
