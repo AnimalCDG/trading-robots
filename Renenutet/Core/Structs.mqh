@@ -1,4 +1,4 @@
-//+------------------------------------------------------------------+
+﻿//+------------------------------------------------------------------+
 //|                                                      Structs.mqh |
 //|                                  Copyright 2024, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
@@ -71,6 +71,17 @@ struct SConfigVenda
    double lote;           // 0.01
    double slPercent;      // 10%
    double tpPercent;      // 0.033% / 0.066% / 0.01%
+};
+
+struct SDadosCandle
+{
+   double abertura;
+   double maxima;
+   double minima;
+   double fechamento;
+
+   double percentualMaxima; // variação % da máxima em relação à abertura (positivo)
+   double percentualMinima; // variação % da mínima em relação à abertura (sempre positivo/absoluto)
 };
 
 #endif

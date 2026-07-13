@@ -10,7 +10,15 @@
 #include "Core/Enums.mqh"
 #include "Indicators/MovingAverage.mqh"
 #include "Indicators/PriceLevels.mqh"
+#include "Indicators/CandleData.mqh"
 #include "Trading/Trading.mqh"
+
+MediaMovel ema7 =
+{
+   "EMA07",
+   EMA,
+   7
+};
 
 MediaMovel ema20 =
 {
@@ -19,47 +27,23 @@ MediaMovel ema20 =
    20
 };
 
-MediaMovel ema50 =
-{
-   "EMA50",
-   EMA,
-   50
-};
-
-MediaMovel ema100 =
-{
-   "EMA100",
-   EMA,
-   100
-};
-
-MediaMovel ema200 =
-{
-   "EMA200",
-   EMA,
-   200
-};
-
-MediaMovel sma20 =
-{
-   "SMA20",
-   SMA,
-   20
-};
-
+/*
 MediaMovel sma50 =
 {
    "SMA50",
    SMA,
    50
 };
+*/
 
 ResistenciaSuporte sr37 = {
    "03_07",
    3,
-   3,
+   7,
    true
 };
+
+SDadosCandle dados;
 
 double resistencia;
 double suporte;
@@ -76,12 +60,8 @@ int OnInit()
    
    ChartTemplate();
    
+   InicializarMedia(ema7);
    InicializarMedia(ema20);
-   //InicializarMedia(ema50);
-   //InicializarMedia(ema100);
-   //InicializarMedia(ema200);
-   InicializarMedia(sma20); //Teste
-   //InicializarMedia(sma50);
    
    InicializarNivelPreco(sr37);
    
@@ -110,26 +90,25 @@ void OnTick()
    
    double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
    double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
-   
+   /*
    if( (ema20.trend.tendencia == FORTE_ALTA) || (ema20.trend.tendencia == ALTA) && (sma20.trend.tendencia == FORTE_ALTA) || (sma20.trend.tendencia == ALTA)) {
       if(bid <= sr37.suporte.valor) {
          Print("OPERAÇÃO DE COMPRA [", bid, "]");
       }
    }
-   
+   */
+   AtualizarMedia(ema7);
    AtualizarMedia(ema20);
-   //AtualizarMedia(ema50);   
-   //AtualizarMedia(ema100);
-   //AtualizarMedia(ema200);
-   AtualizarMedia(sma20); //Teste
-   //AtualizarMedia(sma50);
    
+   if(ObterDadosCandle(PERIOD_D1, 1, dados))
+   {
+      PrintFormat("O=%.5f H=%.5f L=%.5f C=%.5f | %%Max=%.3f%% %%Min=%.3f%%",
+         dados.abertura, dados.maxima, dados.minima, dados.fechamento,
+         dados.percentualMaxima, dados.percentualMinima);
+   }
+   
+   PrintMedia(ema7);
    PrintMedia(ema20);
-   //PrintMedia(ema50);
-   //PrintMedia(ema100);
-   //PrintMedia(ema200);
-   PrintMedia(sma20); //Teste
-   //PrintMedia(sma50);
    
    //---   
 }
