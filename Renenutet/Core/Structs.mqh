@@ -84,4 +84,12 @@ struct SDadosCandle
    double percentualMinima; // variação % da mínima em relação à abertura (sempre positivo/absoluto)
 };
 
+struct SParametrosOperacionais
+{
+   double saldoDisponivel;  // margem livre (ACCOUNT_MARGIN_FREE) atual da conta
+   double capitalAlocado;   // saldoDisponivel * percentual configurado
+   double loteMaximo;       // lote máximo que o capitalAlocado permite abrir, já normalizado
+   bool   podeOperar;       // true se há capital/margem suficiente para abrir ao menos o lote mínimo
+};
+
 #endif

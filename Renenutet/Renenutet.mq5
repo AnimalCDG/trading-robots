@@ -8,10 +8,20 @@
 #property version   "1.00"
 
 #include "Core/Enums.mqh"
+#include "Core/Constants.mqh"
 #include "Indicators/MovingAverage.mqh"
 #include "Indicators/PriceLevels.mqh"
 #include "Indicators/CandleData.mqh"
+#include "Trading/RiskManager.mqh"
+#include "Trading/OrderManager.mqh"
 #include "Trading/Trading.mqh"
+
+input double PercentualAlocacaoTeste = 30.0;
+
+SParametrosOperacionais parametros;
+
+// Orcamento de lote disponivel para o teste (debitado a cada ordem criada)
+double g_loteDisponivel = 0.0;
 
 MediaMovel ema7 =
 {
@@ -27,14 +37,12 @@ MediaMovel ema20 =
    20
 };
 
-/*
-MediaMovel sma50 =
+MediaMovel sma20 =
 {
-   "SMA50",
+   "SMA20",
    SMA,
-   50
+   20
 };
-*/
 
 ResistenciaSuporte sr37 = {
    "03_07",
@@ -62,8 +70,20 @@ int OnInit()
    
    InicializarMedia(ema7);
    InicializarMedia(ema20);
+   InicializarMedia(sma20);
    
    InicializarNivelPreco(sr37);
+   
+   if(ObterParametrosOperacionais(PercentualAlocacaoTeste, ORDER_TYPE_BUY, parametros))
+   {
+      g_loteDisponivel = parametros.loteMaximo;
+
+      if(parametros.podeOperar)
+         PrintFormat("Lote máximo permitido: %.2f (capital: %.2f de saldo: %.2f)",
+            parametros.loteMaximo, parametros.capitalAlocado, parametros.saldoDisponivel);
+      else
+         Print("Sem condições de operar no momento.");
+   }
    
    //---
    return(INIT_SUCCEEDED);
@@ -90,25 +110,63 @@ void OnTick()
    
    double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
    double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
-   /*
-   if( (ema20.trend.tendencia == FORTE_ALTA) || (ema20.trend.tendencia == ALTA) && (sma20.trend.tendencia == FORTE_ALTA) || (sma20.trend.tendencia == ALTA)) {
-      if(bid <= sr37.suporte.valor) {
-         Print("OPERAÇÃO DE COMPRA [", bid, "]");
-      }
-   }
-   */
+   
    AtualizarMedia(ema7);
    AtualizarMedia(ema20);
+   AtualizarMedia(sma20);
+   
+   double entradaUm = 0.0;
+   double entradaDois = 0.0;
+   
+   double saidaUM = 0.0;
+   double saidaDois = 0.0;
    
    if(ObterDadosCandle(PERIOD_D1, 1, dados))
    {
       PrintFormat("O=%.5f H=%.5f L=%.5f C=%.5f | %%Max=%.3f%% %%Min=%.3f%%",
          dados.abertura, dados.maxima, dados.minima, dados.fechamento,
          dados.percentualMaxima, dados.percentualMinima);
+         
+      entradaUm = dados.fechamento - (dados.fechamento * (dados.percentualMinima / 100));
+      entradaDois = dados.fechamento - (dados.fechamento * (dados.percentualMaxima / 100));
+      
+      saidaUM = entradaUm + (entradaUm * (dados.percentualMaxima / 100));
+      saidaDois = entradaDois + (entradaDois * (dados.percentualMaxima / 100));
+      
+      Print("E1 [", entradaUm ,"] | E2 [", entradaDois ,"] S1 [", saidaUM ,"] | S2 [", saidaDois ,"]");
+
+      // --- Teste: cria ordens pendentes de compra quando SMA20 estiver em alta ---
+      if(sma20.trend.tendencia == ALTA || sma20.trend.tendencia == FORTE_ALTA)
+      {
+         if(g_loteDisponivel >= 0.01)
+         {
+            if(!ExisteOrdemNoPreco(entradaUm, MAGIC_TESTE))
+            {
+               if(AbrirOrdemPendenteCompra(entradaUm, 0.01, saidaUM, MAGIC_TESTE, "Teste E1") != 0)
+                  g_loteDisponivel -= 0.01;
+            }
+         }
+
+         if(g_loteDisponivel >= 0.01)
+         {
+            if(!ExisteOrdemNoPreco(entradaDois, MAGIC_TESTE))
+            {
+               if(AbrirOrdemPendenteCompra(entradaDois, 0.01, saidaDois, MAGIC_TESTE, "Teste E2") != 0)
+                  g_loteDisponivel -= 0.01;
+            }
+         }
+      }
    }
+
+   if(parametros.podeOperar)
+         PrintFormat("Lote máximo permitido: %.2f (capital: %.2f de saldo: %.2f) | Disponível para novas ordens: %.2f",
+            parametros.loteMaximo, parametros.capitalAlocado, parametros.saldoDisponivel, g_loteDisponivel);
+      else
+         Print("Sem condições de operar no momento.");
    
    PrintMedia(ema7);
    PrintMedia(ema20);
+   PrintMedia(sma20);
    
    //---   
 }

@@ -9,5 +9,6 @@
 #define __CONSTANTS_MQH__
 
 #define LIMIAR_SLOPE 0.00005
+#define MAGIC_TESTE  20260714
 
 #endif

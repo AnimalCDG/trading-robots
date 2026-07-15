@@ -244,4 +244,73 @@ ulong AbrirOrdemVenda(double lote, double sl, double tp, long magic, string come
    return trade.ResultOrder();
 }
 
+//+------------------------------------------------------------------+
+//| Verifica se ja existe uma ordem pendente OU posicao aberta no    |
+//| mesmo preco informado (mesmo simbolo/magic), evitando duplicar   |
+//| a mesma entrada.                                                  |
+//| tolerancia : distancia maxima (em pontos do simbolo) para        |
+//|              considerar "o mesmo preco". Default = 1 tick.        |
+//+------------------------------------------------------------------+
+bool ExisteOrdemNoPreco(double preco, long magic, double tolerancia = -1.0)
+{
+   if(tolerancia < 0.0)
+   {
+      double tickSize = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
+      tolerancia = (tickSize > 0.0) ? tickSize : _Point;
+   }
+
+   // Ordens pendentes
+   for(int i = 0; i < OrdersTotal(); i++)
+   {
+      ulong ticket = OrderGetTicket(i);
+
+      if(OrderSelect(ticket))
+      {
+         if(OrderGetString(ORDER_SYMBOL) == _Symbol &&
+            OrderGetInteger(ORDER_MAGIC) == magic &&
+            MathAbs(OrderGetDouble(ORDER_PRICE_OPEN) - preco) <= tolerancia)
+         {
+            return true;
+         }
+      }
+   }
+
+   // Posicoes ja abertas
+   for(int i = 0; i < PositionsTotal(); i++)
+   {
+      ulong ticket = PositionGetTicket(i);
+
+      if(PositionSelectByTicket(ticket))
+      {
+         if(PositionGetString(POSITION_SYMBOL) == _Symbol &&
+            PositionGetInteger(POSITION_MAGIC) == magic &&
+            MathAbs(PositionGetDouble(POSITION_PRICE_OPEN) - preco) <= tolerancia)
+         {
+            return true;
+         }
+      }
+   }
+
+   return false;
+}
+
+//+------------------------------------------------------------------+
+//| Cria uma ordem pendente BUY LIMIT (compra abaixo do preco atual).|
+//| Retorna o ticket da ordem pendente, ou 0 em caso de falha.       |
+//+------------------------------------------------------------------+
+ulong AbrirOrdemPendenteCompra(double preco, double lote, double tp, long magic, string comentario = "")
+{
+   CTrade trade;
+   trade.SetExpertMagicNumber(magic);
+
+   if(!trade.BuyLimit(lote, preco, _Symbol, 0.0, tp, ORDER_TIME_GTC, 0, comentario))
+   {
+      Print("AbrirOrdemPendenteCompra: falha ao enviar Buy Limit - erro ", GetLastError(),
+            " (retcode ", trade.ResultRetcode(), ")");
+      return 0;
+   }
+
+   return trade.ResultOrder();
+}
+
 #endif
