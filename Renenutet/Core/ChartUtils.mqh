@@ -13,10 +13,14 @@ void ChartTemplate()
    ChartSetInteger(NULL, CHART_MODE, CHART_CANDLES);           // Define o gráfico para o modo de velas (CHART_BARS para barras, CHART_LINE para linha)
    ChartSetInteger(0, CHART_SHOW_GRID, false);                 // Remove a grade do gráfico
    ChartSetInteger(0, CHART_COLOR_BACKGROUND, clrBlack);       // Define o fundo do gráfico como preto
-   ChartSetInteger(0, CHART_COLOR_CANDLE_BULL, clrLightBlue);  // Define a cor do corpo das velas de alta como verde
-   ChartSetInteger(0, CHART_COLOR_CHART_UP, clrLightBlue);     // Define a cor do contorno das velas de alta como verde
-   ChartSetInteger(0, CHART_COLOR_CANDLE_BEAR, clrPlum);       // Define a cor do corpo das velas de baixa como vermelho
-   ChartSetInteger(0, CHART_COLOR_CHART_DOWN, clrPlum);        // Define a cor do contorno das velas de baixa como vermelho
+   //ChartSetInteger(0, CHART_COLOR_CANDLE_BULL, clrLightBlue);  // Define a cor do corpo das velas de alta como verde
+   //ChartSetInteger(0, CHART_COLOR_CHART_UP, clrLightBlue);     // Define a cor do contorno das velas de alta como verde
+   ChartSetInteger(0, CHART_COLOR_CANDLE_BULL, clrGreen);  // Define a cor do corpo das velas de alta como verde
+   ChartSetInteger(0, CHART_COLOR_CHART_UP, clrGreen);     // Define a cor do contorno das velas de alta como verde
+   //ChartSetInteger(0, CHART_COLOR_CANDLE_BEAR, clrPlum);       // Define a cor do corpo das velas de baixa como vermelho
+   //ChartSetInteger(0, CHART_COLOR_CHART_DOWN, clrPlum);        // Define a cor do contorno das velas de baixa como vermelho
+   ChartSetInteger(0, CHART_COLOR_CANDLE_BEAR, clrRed);       // Define a cor do corpo das velas de baixa como vermelho
+   ChartSetInteger(0, CHART_COLOR_CHART_DOWN, clrRed);        // Define a cor do contorno das velas de baixa como vermelho
 }
 
 void DrawLine(

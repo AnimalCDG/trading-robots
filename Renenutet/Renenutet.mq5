@@ -16,12 +16,11 @@
 #include "Trading/OrderManager.mqh"
 #include "Trading/Trading.mqh"
 
-input double PercentualAlocacaoTeste = 30.0;
+input double PercentualAlocacaoTeste = 5.0;
+
+#define MAGIC_TRIANGULO_ASCENDENTE 555002  // TODO: mover para Core/Constants.mqh junto de MAGIC_TRIANGULO, com valor definitivo
 
 SParametrosOperacionais parametros;
-
-// Orcamento de lote disponivel para o teste (debitado a cada ordem criada)
-double g_loteDisponivel = 0.0;
 
 MediaMovel ema7 =
 {
@@ -34,13 +33,6 @@ MediaMovel ema20 =
 {
    "EMA20",
    EMA,
-   20
-};
-
-MediaMovel sma20 =
-{
-   "SMA20",
-   SMA,
    20
 };
 
@@ -59,6 +51,8 @@ double suporte;
 double min03_07 = 0;
 double max03_07 = 0;
 
+double   DEBUG = true;
+
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
@@ -68,22 +62,19 @@ int OnInit()
    
    ChartTemplate();
    
-   InicializarMedia(ema7);
-   InicializarMedia(ema20);
-   InicializarMedia(sma20);
+   //InicializarMedia(ema7);
+   //InicializarMedia(ema20);
    
-   InicializarNivelPreco(sr37);
+   //InicializarNivelPreco(sr37);
    
-   if(ObterParametrosOperacionais(PercentualAlocacaoTeste, ORDER_TYPE_BUY, parametros))
-   {
-      g_loteDisponivel = parametros.loteMaximo;
-
-      if(parametros.podeOperar)
-         PrintFormat("Lote máximo permitido: %.2f (capital: %.2f de saldo: %.2f)",
-            parametros.loteMaximo, parametros.capitalAlocado, parametros.saldoDisponivel);
-      else
-         Print("Sem condições de operar no momento.");
-   }
+   //if(ObterParametrosOperacionais(PercentualAlocacaoTeste, ORDER_TYPE_BUY, parametros))
+   //{
+   //   if(parametros.podeOperar)
+   //      PrintFormat("Lote máximo permitido: %.2f (capital: %.2f de saldo: %.2f)",
+   //         parametros.loteMaximo, parametros.capitalAlocado, parametros.saldoDisponivel);
+   //   else
+   //      Print("Sem condições de operar no momento.");
+   //}
    
    //---
    return(INIT_SUCCEEDED);
@@ -103,18 +94,22 @@ void OnDeinit(const int reason)
 void OnTick()
 {
    //---
-
-   AtualizarNivelPreco(sr37);
-   
-   PrintPriceLevel(sr37);
    
    double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
    double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
    
-   AtualizarMedia(ema7);
-   AtualizarMedia(ema20);
-   AtualizarMedia(sma20);
+   if (DetectarFechamentoCandle(DEBUG)) {
+      DetectarOutSiderCandle(DEBUG);
+      DetectarInSiderCandle(DEBUG);
+   }   
    
+   //AtualizarNivelPreco(sr37);   
+   //PrintPriceLevel(sr37);
+   
+   //AtualizarMedia(ema7);
+   //AtualizarMedia(ema20);
+   
+   /*
    double entradaUm = 0.0;
    double entradaDois = 0.0;
    
@@ -135,38 +130,40 @@ void OnTick()
       
       Print("E1 [", entradaUm ,"] | E2 [", entradaDois ,"] S1 [", saidaUM ,"] | S2 [", saidaDois ,"]");
 
-      // --- Teste: cria ordens pendentes de compra quando SMA20 estiver em alta ---
-      if(sma20.trend.tendencia == ALTA || sma20.trend.tendencia == FORTE_ALTA)
+      // --- Teste: cria ordens pendentes de compra quando EMA20 estiver em alta ---
+      if(ema7.trend.tendencia == ALTA || ema7.trend.tendencia == FORTE_ALTA)
       {
-         if(g_loteDisponivel >= 0.01)
+         if(ObterParametrosOperacionais(PercentualAlocacaoTeste, ORDER_TYPE_BUY, parametros) && parametros.podeOperar)
          {
-            if(!ExisteOrdemNoPreco(entradaUm, MAGIC_TESTE))
+            double loteRestanteTick = parametros.loteMaximo;
+
+            if(loteRestanteTick >= 0.01 && !ExisteOrdemNoPreco(entradaUm, MAGIC_TESTE))
             {
                if(AbrirOrdemPendenteCompra(entradaUm, 0.01, saidaUM, MAGIC_TESTE, "Teste E1") != 0)
-                  g_loteDisponivel -= 0.01;
+                  loteRestanteTick -= 0.01;
             }
-         }
 
-         if(g_loteDisponivel >= 0.01)
-         {
-            if(!ExisteOrdemNoPreco(entradaDois, MAGIC_TESTE))
+            if(loteRestanteTick >= 0.01 && !ExisteOrdemNoPreco(entradaDois, MAGIC_TESTE))
             {
                if(AbrirOrdemPendenteCompra(entradaDois, 0.01, saidaDois, MAGIC_TESTE, "Teste E2") != 0)
-                  g_loteDisponivel -= 0.01;
+                  loteRestanteTick -= 0.01;
             }
          }
       }
    }
-
-   if(parametros.podeOperar)
-         PrintFormat("Lote máximo permitido: %.2f (capital: %.2f de saldo: %.2f) | Disponível para novas ordens: %.2f",
-            parametros.loteMaximo, parametros.capitalAlocado, parametros.saldoDisponivel, g_loteDisponivel);
-      else
-         Print("Sem condições de operar no momento.");
+   */
    
-   PrintMedia(ema7);
-   PrintMedia(ema20);
-   PrintMedia(sma20);
+   //ProcessarTrianguloSimetrico(0.01, MAGIC_TRIANGULO); // lote e magic number a definir
+   //ProcessarTrianguloAscendente(0.01, MAGIC_TRIANGULO_ASCENDENTE); // magic distinto do Simetrico p/ nao conflitar checagens de posicao/ordem
+   
+   //if(parametros.podeOperar)
+   //      PrintFormat("Lote máximo permitido: %.2f (capital: %.2f de saldo: %.2f)",
+   //         parametros.loteMaximo, parametros.capitalAlocado, parametros.saldoDisponivel);
+   //   else
+   //      Print("Sem condições de operar no momento.");
+   
+   //PrintMedia(ema7);
+   //PrintMedia(ema20);
    
    //---   
 }

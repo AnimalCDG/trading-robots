@@ -313,4 +313,68 @@ ulong AbrirOrdemPendenteCompra(double preco, double lote, double tp, long magic,
    return trade.ResultOrder();
 }
 
+//+------------------------------------------------------------------+
+//| Cria uma ordem pendente BUY STOP (compra acima do preco atual,   |
+//| usada para confirmar rompimento de resistencia). SL e TP juntos. |
+//| Retorna o ticket da ordem pendente, ou 0 em caso de falha.       |
+//+------------------------------------------------------------------+
+ulong AbrirOrdemPendenteCompraStop(double preco, double lote, double sl, double tp, long magic, string comentario = "")
+{
+   CTrade trade;
+   trade.SetExpertMagicNumber(magic);
+
+   if(!trade.BuyStop(lote, preco, _Symbol, sl, tp, ORDER_TIME_GTC, 0, comentario))
+   {
+      Print("AbrirOrdemPendenteCompraStop: falha ao enviar Buy Stop - erro ", GetLastError(),
+            " (retcode ", trade.ResultRetcode(), ")");
+      return 0;
+   }
+
+   return trade.ResultOrder();
+}
+
+//+------------------------------------------------------------------+
+//| Cria uma ordem pendente SELL STOP (venda abaixo do preco atual,  |
+//| usada para confirmar rompimento de suporte). SL e TP juntos.     |
+//| Retorna o ticket da ordem pendente, ou 0 em caso de falha.       |
+//+------------------------------------------------------------------+
+ulong AbrirOrdemPendenteVendaStop(double preco, double lote, double sl, double tp, long magic, string comentario = "")
+{
+   CTrade trade;
+   trade.SetExpertMagicNumber(magic);
+
+   if(!trade.SellStop(lote, preco, _Symbol, sl, tp, ORDER_TIME_GTC, 0, comentario))
+   {
+      Print("AbrirOrdemPendenteVendaStop: falha ao enviar Sell Stop - erro ", GetLastError(),
+            " (retcode ", trade.ResultRetcode(), ")");
+      return 0;
+   }
+
+   return trade.ResultOrder();
+}
+
+//+------------------------------------------------------------------+
+//| Verifica se existe ordem pendente (qualquer tipo) para o magic   |
+//| dado, independente do preco. Usado para nao empilhar varias      |
+//| ordens do mesmo padrao enquanto uma ja esta pendente.            |
+//+------------------------------------------------------------------+
+bool ExisteOrdemPendente(long magic)
+{
+   for(int i = 0; i < OrdersTotal(); i++)
+   {
+      ulong ticket = OrderGetTicket(i);
+
+      if(OrderSelect(ticket))
+      {
+         if(OrderGetString(ORDER_SYMBOL) == _Symbol &&
+            OrderGetInteger(ORDER_MAGIC) == magic)
+         {
+            return true;
+         }
+      }
+   }
+
+   return false;
+}
+
 #endif

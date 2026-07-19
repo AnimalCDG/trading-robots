@@ -44,11 +44,73 @@ bool ObterDadosCandle(ENUM_TIMEFRAMES periodo, int indice, SDadosCandle &dados)
    dados.maxima     = maxima;
    dados.minima     = minima;
    dados.fechamento = fechamento;
+   dados.situacao   = (abertura > fechamento);
 
    dados.percentualMaxima = (maxima - abertura) / abertura * 100.0;
    dados.percentualMinima = MathAbs((minima - abertura) / abertura * 100.0);
 
    return true;
+}
+
+/**
+ * @brief Detecta o fechamento de um candle.
+ *
+ * Verifica se um novo candle foi iniciado comparando o horário de abertura
+ * do candle atual com o da última execução. Quando um novo candle é criado,
+ * significa que o candle anterior foi fechado.
+ *
+ * @param debug Se true, exibe uma mensagem no log quando um novo candle é detectado.
+ *
+ * @return true  Se um novo candle foi iniciado (candle anterior fechado).
+ * @return false Caso contrário.
+ */
+bool DetectarFechamentoCandle(bool debug = false) {
+
+   static datetime ultimoCandle = 0;
+   datetime candleAtual = iTime(_Symbol, PERIOD_CURRENT, 0);
+   if(candleAtual != ultimoCandle)
+   {
+      ultimoCandle = candleAtual;
+      if(debug)
+         Print("Candle anterior fechado!");
+      return true;
+   }
+   
+   return false;
+}
+
+bool DetectarOutSiderCandle(bool debug = false) {
+   bool retornoOutSider = false;
+   
+   static SDadosCandle ultimoCandle;
+   static SDadosCandle antePenultimoCandle;
+   
+   ObterDadosCandle(PERIOD_CURRENT, 1, ultimoCandle);
+   ObterDadosCandle(PERIOD_CURRENT, 2, antePenultimoCandle);
+   
+   retornoOutSider = (ultimoCandle.maxima > antePenultimoCandle.maxima) && (ultimoCandle.minima < antePenultimoCandle.minima);
+   
+   if(debug);
+      Print("OutSider Bar: ", retornoOutSider);
+   
+   return retornoOutSider;
+}
+
+bool DetectarInSiderCandle(bool debug = false) {
+   bool retornoInSider = false;
+   
+   static SDadosCandle ultimoCandle;
+   static SDadosCandle antePenultimoCandle;
+   
+   ObterDadosCandle(PERIOD_CURRENT, 1, ultimoCandle);
+   ObterDadosCandle(PERIOD_CURRENT, 2, antePenultimoCandle);
+   
+   retornoInSider = (ultimoCandle.maxima < antePenultimoCandle.maxima) && (ultimoCandle.minima > antePenultimoCandle.minima);
+   
+   if(debug);
+      Print("InSider Bar: ", retornoInSider);
+   
+   return retornoInSider;
 }
 
 #endif

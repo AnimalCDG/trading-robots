@@ -1,4 +1,4 @@
-//+------------------------------------------------------------------+
+﻿//+------------------------------------------------------------------+
 //|                                                        Enums.mqh |
 //|                                  Copyright 2024, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
@@ -36,6 +36,13 @@ enum ENUM_ESTADO_ESTRATEGIA
    ESTADO_AGUARDANDO_GATILHO,
    ESTADO_COMPRA_ENVIADA,
    ESTADO_VENDAS_CRIADAS
+};
+
+enum ETipoRompimentoAscendente
+{
+   ROMPIMENTO_NENHUM,
+   ROMPIMENTO_RESISTENCIA_ALTA,  // clássico: rompe topo horizontal para cima
+   ROMPIMENTO_LTA_BAIXA          // alternativo: rompe LTA para baixo
 };
 
 #endif
