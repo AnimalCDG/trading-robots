@@ -1,4 +1,4 @@
-﻿//+------------------------------------------------------------------+
+//+------------------------------------------------------------------+
 //|                                                    Renenutet.mq5 |
 //|                                  Copyright 2024, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
@@ -12,8 +12,10 @@
 #include "Indicators/MovingAverage.mqh"
 #include "Indicators/PriceLevels.mqh"
 #include "Indicators/CandleData.mqh"
+#include "Indicators/Ichimoku.mqh"
 #include "Trading/RiskManager.mqh"
 #include "Trading/OrderManager.mqh"
+//#include "Trading/TrendManager.mqh"
 #include "Trading/Trading.mqh"
 
 input double PercentualAlocacaoTeste = 5.0;
@@ -51,7 +53,13 @@ double suporte;
 double min03_07 = 0;
 double max03_07 = 0;
 
-double   DEBUG = true;
+double   DEBUG    = true;
+
+input    int      InpTenkan            = 9;
+input    int      InpKijun             = 26;
+input    int      InpSenkouB           = 52;
+input    double   InpLoteIchimoku      = 0.01;
+input    int      InpMagicIchimoku     = 20260726; // magic próprio, separado dos triângulos
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -61,9 +69,26 @@ int OnInit()
    //---
    
    ChartTemplate();
+   /*
+   if(!InicializarFractal(true))
+      return INIT_FAILED;
+      
+   if(!InicializarFRAMA(true))
+      return INIT_FAILED;
+      
+   if(!InicializarADX(true))
+      return INIT_FAILED;
+      
+   if(!InicializarEnvelopes(true))
+      return INIT_FAILED;
+   */   
+   if(!InicializarIchimoku(true))
+      return INIT_FAILED;
    
    //InicializarMedia(ema7);
    //InicializarMedia(ema20);
+   
+   
    
    //InicializarNivelPreco(sr37);
    
@@ -76,6 +101,8 @@ int OnInit()
    //      Print("Sem condições de operar no momento.");
    //}
    
+   CarregarHistoricoResistenciaSuporte(DEBUG);
+   
    //---
    return(INIT_SUCCEEDED);
 }
@@ -85,7 +112,11 @@ int OnInit()
 void OnDeinit(const int reason)
 {
    //---
-   
+   //DescarregarFractal(true);
+   //DescarregarFRAMA(true);
+   //DescarregarADX(true);
+   //DescarregarEnvelopes(true);
+   DescarregarIchimoku(true);
    //---
 }
 //+------------------------------------------------------------------+
@@ -99,9 +130,16 @@ void OnTick()
    double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
    
    if (DetectarFechamentoCandle(DEBUG)) {
+   
+      //InserirResistenciaSuporte(DEBUG);
+   
       DetectarOutSiderCandle(DEBUG);
       DetectarInSiderCandle(DEBUG);
-   }   
+      ProcessarIchimoku(InpLoteIchimoku, InpMagicIchimoku, InpTenkan, InpKijun, InpSenkouB);
+      //PrintMedia(ema20);
+   }
+   
+   
    
    //AtualizarNivelPreco(sr37);   
    //PrintPriceLevel(sr37);

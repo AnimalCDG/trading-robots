@@ -1,4 +1,4 @@
-﻿//+------------------------------------------------------------------+
+//+------------------------------------------------------------------+
 //|                                                      Trading.mqh |
 //|                                  Copyright 2024, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
@@ -11,6 +11,8 @@
 #include "../Core/Structs.mqh"
 #include "../Patterns/TrianguloSimetrico.mqh"
 #include "../Patterns/TrianguloAscendente.mqh"
+#include "../Indicators/CandleData.mqh"
+#include "../Indicators/Ichimoku.mqh"
 #include "OrderManager.mqh"
 #include "RiskManager.mqh"
 #include "PositionManager.mqh"
@@ -131,6 +133,77 @@ void ProcessarTrianguloAscendente(double lote, long magic)
 
       // Apos o rompimento, a figura se encerra: reseta para permitir nova deteccao
       g_trianguloAscendenteAtivo = false;
+   }
+}
+
+void CarregarHistoricoResistenciaSuporte(bool debug = false) {
+
+   SDadosCandle candle;
+   for(int periodo = LIMITE_ARRAY; periodo >= 1; periodo--) {
+      ObterDadosCandle(PERIOD_CURRENT, periodo, candle);
+      InserirResistencia(candle.maxima, candle.minima);
+   }
+
+   if(debug) {
+      int tamanho = ArraySize(filaResistencia);
+      Print("Quantidade: ", tamanho);
+      if( tamanho > 0 ) {
+         PrintFormat(
+            "Primeiro=%.5f; Ultimo=%.5f",
+            filaResistencia[0].suporte,
+            filaResistencia[tamanho - 1].suporte
+         );
+      }
+   }
+
+}
+
+void InserirResistenciaSuporte(bool debug = false) {
+
+   SDadosCandle candle;
+   
+   ObterDadosCandle(PERIOD_CURRENT, 0, candle);
+   InserirResistencia(candle.maxima, candle.minima);
+
+   if(debug) {
+      int tamanho = ArraySize(filaResistencia);
+      Print("Quantidade: ", tamanho);
+      if( tamanho > 0 ) {
+         PrintFormat(
+            "Primeiro=%.5f; Ultimo=%.5f",
+            filaResistencia[0].suporte,
+            filaResistencia[tamanho - 1].suporte
+         );
+      }
+   }
+
+}
+
+void ProcessarIchimoku(double lote, int magic, int tenkan, int kijun, int senkouB)
+{
+   //static datetime ultimoCandleProcessado = 0;
+   //datetime candleAtual = iTime(_Symbol, PERIOD_CURRENT, 0);
+   //if(candleAtual == ultimoCandleProcessado) return;
+   //ultimoCandleProcessado = candleAtual;
+
+   if(ExistePosicaoAberta(magic) || ExisteOrdemPendente(magic)) return;
+
+   SDadosIchimoku dados;
+   if(!ObterDadosIchimoku(dados, kijun)) return;
+
+   if(dados.tendencia == ICHIMOKU_ALTA_FORTE && dados.chikouLivre)
+   {
+      double sl = dados.kijun;
+      // abrir compra a mercado, SL = dados.kijun
+      // ex: AbrirOrdemCompraMercado(lote, sl, 0, magic);
+      Print("AbrirOrdemCompraMercado(lote, sl, 0, magic)");
+   }
+   else if(dados.tendencia == ICHIMOKU_BAIXA_FORTE && dados.chikouLivre)
+   {
+      double sl = dados.kijun;
+      // abrir venda a mercado, SL = dados.kijun
+      // ex: AbrirOrdemVendaMercado(lote, sl, 0, magic);
+      Print("AbrirOrdemVendaMercado(lote, sl, 0, magic)");
    }
 }
 

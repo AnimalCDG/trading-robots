@@ -9,6 +9,13 @@
 #define __UTILS_MQH__
 
 #include "Enums.mqh"
+#include "Structs.mqh"
+#include "Constants.mqh"
+
+//double filaResistencia[];
+double filaSuporte[];
+
+SDadosResistenciaSuporte filaResistencia[];
 
 string TendenciaToString(Tendencia tendencia)
 {
@@ -60,6 +67,82 @@ double PrecoAPartirDePercentual(double precoBase, double percentual, bool paraCi
    double resultado = paraCima ? (precoBase + variacao) : (precoBase - variacao);
 
    return NormalizarPreco(resultado);
+}
+
+/*
+void InserirResistencia(double valor)
+{
+   int tamanho = ArraySize(filaResistencia);
+
+   if(tamanho < LIMITE_ARRAY)
+   {
+      ArrayResize(filaResistencia, tamanho + 1);
+      filaResistencia[tamanho] = valor;
+   }
+   else
+   {
+      // Desloca todos os elementos para a esquerda
+      for(int i = 1; i < LIMITE_ARRAY; i++)
+         filaResistencia[i - 1] = filaResistencia[i];
+
+      // Insere o novo no final
+      filaResistencia[LIMITE_ARRAY - 1] = valor;
+   }
+}
+*/
+
+void InserirResistencia(double maxima, double minima)
+{
+   int tamanho = ArraySize(filaResistencia);
+   
+   static SDadosResistenciaSuporte tempResistencia;
+   tempResistencia.resistencia     = maxima;
+   tempResistencia.suporte         = minima;
+   
+   if(tamanho < LIMITE_ARRAY)
+   {
+      if(tamanho > 0) {
+         if(tempResistencia.resistencia > filaResistencia[tamanho - 1].resistencia)
+            return;
+      }
+      ArrayResize(filaResistencia, tamanho + 1);
+      filaResistencia[tamanho] = tempResistencia;
+   }
+   else
+   {
+      // Desloca todos os elementos para a esquerda
+      for(int i = 1; i < LIMITE_ARRAY; i++)
+         filaResistencia[i - 1] = filaResistencia[i];
+
+      // Insere o novo no final
+      filaResistencia[LIMITE_ARRAY - 1] = tempResistencia;
+   }
+}
+
+/**
+ * @brief Remove o registro mais antigo da fila.
+ *
+ * Remove o primeiro elemento (posição 0), deslocando os demais
+ * elementos uma posição para a esquerda.
+ *
+ * @return true  Se um elemento foi removido.
+ * @return false Se a fila estiver vazia.
+ */
+bool RemoverResistencia()
+{
+   int tamanho = ArraySize(filaResistencia);
+
+   if(tamanho == 0)
+      return false;
+
+   // Desloca os elementos para a esquerda
+   for(int i = 1; i < tamanho; i++)
+      filaResistencia[i - 1] = filaResistencia[i];
+
+   // Reduz o tamanho do array
+   ArrayResize(filaResistencia, tamanho - 1);
+
+   return true;
 }
 
 #endif

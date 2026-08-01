@@ -80,8 +80,9 @@ bool DetectarFechamentoCandle(bool debug = false) {
 }
 
 bool DetectarOutSiderCandle(bool debug = false) {
-   bool retornoOutSider = false;
    
+   static bool retornoOutSider = false;
+
    static SDadosCandle ultimoCandle;
    static SDadosCandle antePenultimoCandle;
    
@@ -91,7 +92,12 @@ bool DetectarOutSiderCandle(bool debug = false) {
    retornoOutSider = (ultimoCandle.maxima > antePenultimoCandle.maxima) && (ultimoCandle.minima < antePenultimoCandle.minima);
    
    if(debug);
-      Print("OutSider Bar: ", retornoOutSider);
+      PrintFormat(
+            "%s=%d|%s",
+            "OutSider",
+            retornoOutSider,
+            retornoOutSider ? "Sim" : "Não"
+         );
    
    return retornoOutSider;
 }
@@ -108,7 +114,12 @@ bool DetectarInSiderCandle(bool debug = false) {
    retornoInSider = (ultimoCandle.maxima < antePenultimoCandle.maxima) && (ultimoCandle.minima > antePenultimoCandle.minima);
    
    if(debug);
-      Print("InSider Bar: ", retornoInSider);
+      PrintFormat(
+            "%s=%d|%s",
+            "InSider",
+            retornoInSider,
+            retornoInSider ? "Sim" : "Não"
+         );
    
    return retornoInSider;
 }

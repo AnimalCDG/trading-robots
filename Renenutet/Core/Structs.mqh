@@ -142,4 +142,10 @@ struct SDadosTrianguloAscendente
    int      indiceBarInicioFigura;   // índice da barra mais antiga usada (topo ou fundo)
 };
 
+struct SDadosResistenciaSuporte
+{
+   double resistencia;
+   double suporte;
+};
+
 #endif

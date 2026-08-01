@@ -1,4 +1,4 @@
-﻿//+------------------------------------------------------------------+
+//+------------------------------------------------------------------+
 //|                                                        Enums.mqh |
 //|                                  Copyright 2024, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
@@ -43,6 +43,32 @@ enum ETipoRompimentoAscendente
    ROMPIMENTO_NENHUM,
    ROMPIMENTO_RESISTENCIA_ALTA,  // clássico: rompe topo horizontal para cima
    ROMPIMENTO_LTA_BAIXA          // alternativo: rompe LTA para baixo
+};
+
+// Enums.mqh - adicionar
+enum ETendenciaIchimoku
+{
+   ICHIMOKU_ALTA_FORTE,
+   ICHIMOKU_ALTA,
+   ICHIMOKU_BAIXA,
+   ICHIMOKU_BAIXA_FORTE,
+   ICHIMOKU_INDEFINIDA
+};
+
+// Structs.mqh - adicionar
+struct SDadosIchimoku
+{
+   double tenkan;
+   double kijun;
+   double senkouA;
+   double senkouB;
+   double chikou;
+   bool   precoAcimaKumo;
+   bool   precoAbaixoKumo;
+   bool   tenkanCruzouKijunAlta;
+   bool   tenkanCruzouKijunBaixa;
+   bool   chikouLivre;
+   ETendenciaIchimoku tendencia;
 };
 
 #endif
